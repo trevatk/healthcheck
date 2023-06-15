@@ -3,7 +3,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"log"
 	"net/http"
@@ -22,7 +21,7 @@ func main() {
 	fxApp := fx.New(
 		fx.Provide(logging.New),
 		fx.Provide(port.NewHTTPServer),
-		fx.Provide(port.NewRouter),
+		fx.Provide(fx.Annotate(port.NewRouter, fx.As(new(http.Handler)))),
 		fx.Invoke(registerHooks),
 	)
 
@@ -43,17 +42,17 @@ func main() {
 	}
 }
 
-func registerHooks(lc fx.Lifecycle, log *zap.Logger, handler http.Handler, sqlite *sql.DB) error {
+func registerHooks(lc fx.Lifecycle, log *zap.Logger, handler http.Handler) error {
 
-	logger := log.Named("lifecycle").Sugar()
+	l := log.Named("lifecycle").Sugar()
 
-	port := os.Getenv("HTTP_SERVER_PORT")
-	if port == "" {
+	p := os.Getenv("HTTP_SERVER_PORT")
+	if p == "" {
 		return errors.New("$HTTP_SERVER_PORT is unset")
 	}
 
 	srv := &http.Server{
-		Addr:         ":" + port,
+		Addr:         ":" + p,
 		Handler:      handler,
 		ReadTimeout:  time.Second * 15,
 		WriteTimeout: time.Second * 15,
@@ -64,11 +63,11 @@ func registerHooks(lc fx.Lifecycle, log *zap.Logger, handler http.Handler, sqlit
 		fx.Hook{
 			OnStart: func(ctx context.Context) error {
 
-				logger.Infof("start http server http://localhost:%s" + port)
+				l.Infof("start http server http://localhost:%s", p)
 
 				go func() {
 					if err := srv.ListenAndServe(); err != nil {
-						logger.Fatalf("failed to start http server %v", err)
+						l.Fatalf("failed to start http server %v", err)
 					}
 				}()
 
@@ -78,18 +77,11 @@ func registerHooks(lc fx.Lifecycle, log *zap.Logger, handler http.Handler, sqlit
 
 				var err error
 
-				logger.Info("close database connection")
-
-				err = sqlite.Close()
-				if err != nil {
-					logger.Errorf("failed to close database connection %v", err)
-				}
-
-				logger.Info("shutdown http server")
+				l.Info("shutdown http server")
 
 				err = srv.Close()
 				if err != nil && !errors.Is(err, http.ErrServerClosed) {
-					logger.Errorf("failed to shutdown http server %v", err)
+					l.Errorf("failed to shutdown http server %v", err)
 				}
 
 				// redudant logging
