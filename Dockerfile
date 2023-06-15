@@ -14,6 +14,6 @@ COPY --from=builder /app/bin/ /app/bin/
 
 COPY migrations /app/migrations
 
-EXPOSE 8080
+EXPOSE 75080
 
 ENTRYPOINT ["/app/bin/server"]
