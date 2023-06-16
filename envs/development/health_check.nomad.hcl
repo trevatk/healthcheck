@@ -13,30 +13,18 @@ job "health" {
             mode = "bridge"
 
             port "http" {
-                to = -1
+                static = -1
+                to = 8090
             }
         }
 
         service {
             name = "health-structx-io"
             tags = [
-                "traefik.enable=true",
-                "traefik.http.routers.health.rule=Host(`health.structx.io`)",
+                "traefik.enable=true"
             ]
             port = "http"
-
-            connect {
-                sidecar_service {}
-            }
-
-            check {
-                name = "alive"
-                type = "http"
-                port = "${NOMAD_PORT_http}"
-                path = "/health"
-                interval = "1m"
-                timeout = "10s"
-            }
+            provider = "consul"
         }
 
         task "server" {
@@ -49,7 +37,7 @@ job "health" {
             }
 
             env {
-                HTTP_SERVER_PORT = "${NOMAD_PORT_http}"
+                HTTP_SERVER_PORT = 8090
             }
 
             resources {

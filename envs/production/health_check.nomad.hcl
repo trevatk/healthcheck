@@ -1,7 +1,7 @@
 
 job "health" {
 
-    datacenters = ["mountain"]
+    datacenters = ["us-mountain-1"]
 
     type = "service"
 
@@ -10,10 +10,9 @@ job "health" {
 
         network {
 
-            mode = "bridge"
-
             port "http" {
-                to = -1
+                static = -1
+                to = 8090
             }
         }
 
@@ -22,16 +21,16 @@ job "health" {
             tags = [
                 "traefik.enable=true",
                 "traefik.http.routers.health.rule=Host(`health.structx.io`)",
+                "traefik.http.routers.health.tls=true",
+                "treafik.http.routers.tls.certresolver=myresolver"
             ]
             port = "http"
-
-            connect {
-                sidecar_service {}
-            }
+            provider = "consul"
 
             check {
                 name = "alive"
                 type = "http"
+                port = "http"
                 path = "/health"
                 interval = "1m"
                 timeout = "10s"
@@ -48,7 +47,7 @@ job "health" {
             }
 
             env {
-                HTTP_SERVER_PORT = "${NOMAD_PORT_http}"
+                HTTP_SERVER_PORT = 8090
             }
 
             resources {

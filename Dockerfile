@@ -12,4 +12,6 @@ FROM gcr.io/distroless/static-debian11
 
 COPY --from=builder /app/bin/ /app/bin/
 
+EXPOSE 8090
+
 ENTRYPOINT ["/app/bin/server"]
